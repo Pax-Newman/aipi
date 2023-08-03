@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 
 from pydantic import BaseModel
@@ -233,8 +232,8 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
 
                 longest = 0
                 for s in stops:
-                    for i in range(len(s), 0, -1):
-                        if text.endswith(s[:i]):
+                    for j in range(len(s), 0, -1):
+                        if text.endswith(s[:j]):
                             longest = max(i, longest)
                             break
     
@@ -257,6 +256,10 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
 
     if req.stream:
         return EventSourceResponse(stream())
+
+    # TODO set finish reason and token usage
+    # It'll have to be done similar to streaming, so prolly include
+    # streaming/non-streaming in the same function
     
     for i in range(req.n):
         resp.choices.append(ChatMessageChoice(
