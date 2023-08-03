@@ -186,6 +186,7 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
 
     def stream():
         for i in range(req.n):
+            print(f'Completion {i+1}/{req.n}')
             model.eval(prompt_tokens)
 
             resp.usage.prompt_tokens += len(prompt_tokens)
