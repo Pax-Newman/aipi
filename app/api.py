@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from sse_starlette.sse import EventSourceResponse
+from fastapi.encoders import jsonable_encoder
+import json
 
 from pydantic import BaseModel
 from enum import Enum
@@ -184,7 +186,10 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
 
     print(prompt)
 
+
     def stream():
+        encode_stream_chunk = lambda c : json.dumps(jsonable_encoder(c))
+
         for i in range(req.n):
             print(f'Completion {i+1}/{req.n}')
             model.eval(prompt_tokens)
@@ -199,7 +204,7 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
                     role=ChatMessageRole.assistant,
                     ),
                 )]
-            yield resp
+            yield encode_stream_chunk(resp)
 
             token_count = 0
             text = ''
@@ -246,7 +251,7 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
                             content = text[:end],
                             ),
                         )]
-                    yield resp
+                    yield encode_stream_chunk(resp)
                     text = text[end:]
     
                 token_count += 1
@@ -256,7 +261,7 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
             model.reset()
 
     if req.stream:
-        return EventSourceResponse(stream())
+        return EventSourceResponse(stream(), media_type='json/event-stream')
 
     # TODO set finish reason and token usage
     # It'll have to be done similar to streaming, so prolly include
