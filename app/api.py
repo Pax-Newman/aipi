@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from enum import Enum
+from typing import Literal
 
 from sentence_transformers import SentenceTransformer
 
@@ -75,7 +76,7 @@ class ChatCompletionModels(str, Enum):
     examplenet = 'examplenet'
 
 class ChatMessage(BaseModel):
-    role: str
+    role: Literal['user', 'system', 'assistant', 'function']
     content: str
     name: str | None = None
 
@@ -128,7 +129,7 @@ async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse
         resp.choices.append(ChatMessageChoice(
             index = i,
             message = ChatMessage(
-                role = 'test',
+                role = 'assistant',
                 content = 'hello world',
                 name = 'test'
                 ),
