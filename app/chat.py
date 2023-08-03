@@ -87,6 +87,7 @@ class ChatCompletionResponse(BaseModel):
 async def chat_completion_models() -> list[str]:
     return list(ChatCompletionModels)
 
+@router.post('/v1/chat/completions')
 @router.post('/chat/completions')
 async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(get_app_instance)) -> ChatCompletionResponse:
     app.state.model = ctransformers.LLM(
