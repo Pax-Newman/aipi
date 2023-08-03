@@ -64,4 +64,77 @@ async def text_embeddings(req: TextEmbeddingRequest):
 
     return data
 
+# --- Chat Completion --- #
+
+class Usage(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+class ChatCompletionModels(str, Enum):
+    examplenet = 'examplenet'
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+    name: str | None = None
+
+class ChatMessageChoice(BaseModel):
+    index: int
+    message: ChatMessage
+    finish_reason: str
+
+class ChatCompletionRequest(BaseModel):
+    model: ChatCompletionModels
+    messages: list[ChatMessage]
+    # function_call: str | None = None
+    temperature: float = 1.0
+    top_p: float = 0.9
+    n: int = 1
+    stream: bool = False
+    stop: str | list[str] | None = None
+    max_tokens: int | None = None
+    presence_penalty: float = 0.0
+    frequency_penalty: float = 0.0
+    logit_bias: dict[str, float] | None = None
+    user: str | None = None
+
+class ChatCompletionResponse(BaseModel):
+    id: str
+    object: str = 'chat.completion'
+    created: int
+    choices: list[ChatMessageChoice]
+    usage: Usage
+
+@app.get('/chat/completions/models')
+def chat_completion_models() -> list[str]:
+    return list(ChatCompletionModels)
+
+@app.post('/chat/completions')
+def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse:
+
+    resp = ChatCompletionResponse(
+            id = 'test',
+            created = 0,
+            choices = [],
+            usage = Usage(
+                prompt_tokens = 0,
+                completion_tokens = 0,
+                total_tokens = 0
+                )
+            )
+
+    for i in range(req.n):
+        resp.choices.append(ChatMessageChoice(
+            index = i,
+            message = ChatMessage(
+                role = 'test',
+                content = 'hello world',
+                name = 'test'
+                ),
+            finish_reason = 'stop'
+            ))
+
+    return resp
+
 
