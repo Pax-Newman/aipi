@@ -107,11 +107,11 @@ class ChatCompletionResponse(BaseModel):
     usage: Usage
 
 @app.get('/chat/completions/models')
-def chat_completion_models() -> list[str]:
+async def chat_completion_models() -> list[str]:
     return list(ChatCompletionModels)
 
 @app.post('/chat/completions')
-def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse:
+async def chat_completions(req: ChatCompletionRequest) -> ChatCompletionResponse:
 
     resp = ChatCompletionResponse(
             id = 'test',
