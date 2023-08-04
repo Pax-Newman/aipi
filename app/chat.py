@@ -101,14 +101,14 @@ def generate_text(
 
 # --- Models --- #
 
+class ChatCompletionModels(str, Enum):
+    examplenet = 'examplenet'
+    othernet = 'othernet'
+
 class Usage(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
-
-class ChatCompletionModels(str, Enum):
-    examplenet = 'examplenet'
-    othernet = 'othernet'
 
 class ChatMessageRole(str, Enum):
     user = 'user'
@@ -120,13 +120,18 @@ class ChatMessage(BaseModel):
     content: str
     name: str | None = None
 
+class ChatMessageChoice(BaseModel):
+    index: int
+    message: ChatMessage
+    finish_reason: str | None = None
+
 class ChatDelta(BaseModel):
     role: ChatMessageRole | None = None
     content: str | None = None
 
-class ChatMessageChoice(BaseModel):
+class ChatChunk(BaseModel):
     index: int
-    message: ChatMessage | ChatDelta
+    delta: ChatDelta
     finish_reason: str | None = None
 
 class ChatCompletionRequest(BaseModel):
@@ -148,13 +153,13 @@ class ChatCompletionResponse(BaseModel):
     id: str
     object: Literal['chat.completion', 'chat.completion.chunk']
     created: int
-    choices: list[ChatMessageChoice]
+    choices: list[ChatMessageChoice | ChatChunk]
     usage: Usage
 
 # --- Routes --- #
 
 @router.get('/chat/completions/models')
-async def chat_completion_models() -> list[str]:
+async def chat_completion_models() -> list[ChatCompletionModels]:
     return list(ChatCompletionModels)
 
 @router.post('/v1/chat/completions')
@@ -202,19 +207,27 @@ async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(ge
     prompt_tokens = model.tokenize(prompt)
 
     resp.usage.prompt_tokens = len(prompt_tokens)
+    resp.usage.total_tokens += len(prompt_tokens)
     
     # Stream completions
     def stream():
         encode_stream_chunk = lambda c : json.dumps(jsonable_encoder(c))
         for choice in range(req.n):
+            # Send initial message to indicate role
+            resp.choices = [ChatChunk(
+                index=choice,
+                delta=ChatDelta(role=ChatMessageRole.assistant),
+                )]
+            yield resp
+
             for token, finish_reason in generate_text(
                     model,
                     prompt_tokens,
                     stops
                     ):
-                resp.choices = [ChatMessageChoice(
+                resp.choices = [ChatChunk(
                     index=choice,
-                    message=ChatDelta(content=token),
+                    delta=ChatDelta(content=token, role=ChatMessageRole.assistant),
                     finish_reason=finish_reason,
                     )]
                 resp.usage.completion_tokens += 1
