@@ -29,6 +29,76 @@ def utf8_split_incomplete(seq: bytes) -> tuple[bytes, bytes]:
 def get_app_instance(request: Request) -> FastAPI:
     return request.app
 
+def generate_text(
+        model: ctransformers.LLM,
+        tokens: list[int],
+        stops: list[str],
+        top_p: float = 0.9,
+        temperature: float = 0.8,
+        max_tokens: int | None = None,
+        repetition_penalty: float = 1.1,
+        ):
+
+    # Ingest tokens
+    model.eval(tokens)
+
+    stop_regex = re.compile("|".join(map(re.escape, stops)))
+
+    count = 0
+    finish_reason = None
+    text = ''
+    incomplete = b''
+
+    while True:
+        token = model.sample(
+                top_p=top_p,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
+                )
+
+        # finish reason eos
+        if model.is_eos_token(token):
+            finish_reason = 'stop'
+            break
+
+        # handle incomplete utf-8 multi-byte characters
+        incomplete += model.detokenize([token], decode=False)
+        complete, incomplete = utf8_split_incomplete(incomplete)
+
+        text += complete.decode('utf-8', errors='ignore')
+
+        if stops:
+            match = stop_regex.search(text)
+            if match:
+                text = text[:match.start()]
+                finish_reason = 'stop'
+                break
+
+        # get the length of the longest stop prefix that is at the end of the text
+        longest = 0
+        for stop in stops:
+            for i in range(len(stop), 0, -1):
+                if text.endswith(stop[:i]):
+                    longest = max(longest, i)
+                    break
+
+        # text[:end] is the text without the stop
+        end = len(text) - longest
+        if end > 0:
+            yield text[:end], finish_reason
+            # save the rest of the text incase the stop prefix doesn't generate a full stop
+            text = text[end:]
+
+        count += 1
+        if max_tokens and count >= max_tokens:
+            finish_reason = 'length'
+            break
+
+        model.eval([token])
+
+    yield text, finish_reason
+
+
 # --- Models --- #
 
 class Usage(BaseModel):
@@ -101,12 +171,13 @@ async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(ge
     app.state.model_name = 'stablebeluga'
     model = app.state.model
 
-
+    # Create chat history prompt
     cap_first = lambda x : x[0].upper() + x[1:]
     
     history = ''.join(f'### {cap_first(message.role)}: {message.content}' for message in req.messages)
     prompt = history + '\n\n### Assistant: '
 
+    # Create chat stops
     if req.stop:
         user_stops = req.stop if isinstance(req.stop, list) else [req.stop]
     else:
@@ -114,6 +185,7 @@ async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(ge
     stops = [f'### {cap_first(role)}:' for role in ChatMessageRole]
     stops = stops + user_stops if user_stops else stops
 
+    # Define response outline
     resp = ChatCompletionResponse(
             id = 'test',
             created = 0,
@@ -128,105 +200,55 @@ async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(ge
 
     # Pre-tokenize prompt to get token usage & save some time
     prompt_tokens = model.tokenize(prompt)
-    stop_regex = re.compile("|".join(map(re.escape, stops)))
 
+    resp.usage.prompt_tokens = len(prompt_tokens)
+    
+    # Stream completions
     def stream():
         encode_stream_chunk = lambda c : json.dumps(jsonable_encoder(c))
-
-        for i in range(req.n):
-            print(f'Completion {i+1}/{req.n}')
-            model.eval(prompt_tokens)
-
-            resp.usage.prompt_tokens += len(prompt_tokens)
-
-            resp.usage.total_tokens = resp.usage.prompt_tokens + resp.usage.completion_tokens
-
-            resp.choices = [ChatMessageChoice(
-                index = i,
-                message = ChatDelta(
-                    role=ChatMessageRole.assistant,
-                    ),
-                )]
-            yield encode_stream_chunk(resp)
-
-            token_count = 0
-            text = ''
-            incomplete = b""
-
-            while True:
-                token = model.sample(
-                        top_p=req.top_p,
-                        temperature=req.temperature,
-                        repetition_penalty=req.frequency_penalty,
-                        )
-                
-                if model.is_eos_token(token):
-                    break
-                model.eval([token])
+        for choice in range(req.n):
+            for token, finish_reason in generate_text(
+                    model,
+                    prompt_tokens,
+                    stops
+                    ):
+                resp.choices = [ChatMessageChoice(
+                    index=choice,
+                    message=ChatDelta(content=token),
+                    finish_reason=finish_reason,
+                    )]
                 resp.usage.completion_tokens += 1
                 resp.usage.total_tokens += 1
-
-                incomplete += model.detokenize([token], decode=False)
-                complete, incomplete = utf8_split_incomplete(incomplete)
-                
-                text += complete.decode('utf-8', errors='ignore')
-
-                # TODO set the finish reason for the response
-
-                if stops:
-                    match = stop_regex.search(text)
-                    if match:
-                        text = text[: match.start()]
-                        break
-
-                longest = 0
-                for s in stops:
-                    for j in range(len(s), 0, -1):
-                        if text.endswith(s[:j]):
-                            longest = max(i, longest)
-                            break
-    
-                end = len(text) - longest
-                if end > 0:
-                    resp.choices = [ChatMessageChoice(
-                        index = i,
-                        message = ChatDelta(
-                            content = text[:end],
-                            ),
-                        )]
-                    yield encode_stream_chunk(resp)
-                    text = text[end:]
-    
-                token_count += 1
-                if req.max_tokens and token_count >= req.max_tokens:
-                    break
-
+                yield encode_stream_chunk(resp)
             model.reset()
 
     if req.stream_completions:
         return EventSourceResponse(stream(), media_type='json/event-stream')
 
-    # TODO set finish reason and token usage
-    # It'll have to be done similar to streaming, so prolly include
-    # streaming/non-streaming in the same function
-    
-    for i in range(req.n):
+    # Create non-streamed completions
+    for choice in range(req.n):
+        completion = ''
+        finish_reason = None
+        tokens = 0
+        for token, reason in generate_text(
+                model,
+                prompt_tokens,
+                stops
+                ):
+            completion += token
+            finish_reason = reason
+            tokens += 1
         resp.choices.append(ChatMessageChoice(
-            index = i,
-            message = ChatMessage(
+            index = choice,
+                message = ChatMessage(
                 role = ChatMessageRole.assistant,
-                content = model(
-                    prompt,
-                    max_new_tokens = req.max_tokens if req.max_tokens >= 1 else None,
-                    top_p = req.top_p,
-                    temperature = req.temperature,
-                    repetition_penalty = req.frequency_penalty,
-                    stop = stops,
-                    stream = False,
-                    ),
+                content = completion,
                 ),
-                finish_reason='stop',
+            finish_reason = finish_reason,
             ))
+        resp.usage.completion_tokens += tokens
+
+    resp.usage.total_tokens += resp.usage.completion_tokens
 
     return resp
 
