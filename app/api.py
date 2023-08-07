@@ -20,7 +20,6 @@ from sentence_transformers import SentenceTransformer
 #
 app = FastAPI()
 
-
 app.include_router(chat_router)
 
 @app.get('/')
@@ -30,6 +29,10 @@ async def root():
 # Keep most recently used model in memory to avoid loading it at each request
 app.state.model = None
 app.state.model_name = ""
+
+# Create a better method for loading models!
+# Let's make a function first then try using 
+# a config to assist loading
 
 def set_model(model_name, **kwargs):
     if app.state.model_name != model_name:
@@ -42,8 +45,7 @@ def set_model(model_name, **kwargs):
 
 # --- Text Embeddings --- #
 
-# TextEmbeddingModels = get_models('text_embedding', my_args)
-
+# Move these to a separate file
 class TextEmbeddingModels(str, Enum):
     all_minilm_l6_v2 = 'all-MiniLM-L6-v2'
 
