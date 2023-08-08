@@ -1,0 +1,6 @@
+uvicorn
+fastapi
+sse_starlette
+torch
+ctransformers
+sentence_transformers
