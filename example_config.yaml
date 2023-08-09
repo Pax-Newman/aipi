@@ -1,0 +1,23 @@
+
+# --- Server Settings
+port: 8000
+
+# --- Model Configs
+
+# All models you want the api to access should be defined here
+models:
+  # These models are for text completion (including chat)
+  completion:
+    # This is the definition for a model
+    stablebeluga:
+      # It's a ggml model so we need to load it as a LlamaCPPModel
+      _target_: 'app.models.LlamaCPPModel'
+      # This is how the api will refer to this model
+      name: 'stablebeluga'
+      # The path to the model file
+      path: '/Users/user123/.models/llm/7B/stablebeluga-7b.ggmlv3.q4_K_M.bin'
+      # Here are llamacpp specific config options
+      # Refer to https://github.com/marella/ctransformers for this
+      type: llama
+      context_length: 2048
+      gpu_layers: 1
