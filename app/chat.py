@@ -88,11 +88,7 @@ async def chat_completion_models() -> list[ChatCompletionModels]:
 @router.post('/chat/completions')
 async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(get_app_instance)) -> ChatCompletionResponse:
 
-    # FIXME this won't work if there's a model under the same name but different function (e.g. embedding)
-    if app.state.model_name == req.model:
-        model = app.state.model
-    else:
-        model = set_model(app, 'stablebeluga', 'completion')
+    model = set_model(app, 'stablebeluga', 'completion')
 
     # Create chat history prompt
     cap_first = lambda x : x[0].upper() + x[1:]
