@@ -1,3 +1,4 @@
+from typing import Literal
 from fastapi import FastAPI
 
 from pydantic import BaseModel
@@ -6,6 +7,8 @@ from enum import Enum
 from .chat import router as chat_router
 
 from sentence_transformers import SentenceTransformer
+
+from skeletonkey import unlock, instantiate
 
 
 # def get_models(model_type: str, args: Namespace) -> type:
@@ -20,6 +23,7 @@ from sentence_transformers import SentenceTransformer
 #
 app = FastAPI()
 
+
 app.include_router(chat_router)
 
 @app.get('/')
@@ -30,24 +34,22 @@ async def root():
 app.state.model = None
 app.state.model_name = ""
 
+@unlock('config.yaml')
+def load_config(config):
+    return config
+
+app.state.config = load_config()
+
 # Create a better method for loading models!
 # Let's make a function first then try using 
 # a config to assist loading
-
-def set_model(model_name, **kwargs):
-    if app.state.model_name != model_name:
-        if model_name in TextEmbeddingModels:
-            app.state.model = SentenceTransformer(model_name)
-        # elif model_name in ChatCompletionModels:
-        #     app.state.model = Llama(model_name, **kwargs)
-
-        app.state.model_name = model_name
 
 # --- Text Embeddings --- #
 
 # Move these to a separate file
 class TextEmbeddingModels(str, Enum):
     all_minilm_l6_v2 = 'all-MiniLM-L6-v2'
+
 
 class TextEmbeddingRequest(BaseModel):
     model: TextEmbeddingModels

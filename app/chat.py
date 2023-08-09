@@ -9,6 +9,7 @@ from typing import Literal
 import json
 
 from .models import LlamaCPPModel, LlamaCPPModelConfig, ModelConfig, ModelInterface
+from .utils import set_model, get_app_instance
 
 router = APIRouter()
 
@@ -18,8 +19,7 @@ router = APIRouter()
 
 # Should probably move most of these into a general utils file
 
-def get_app_instance(request: Request) -> FastAPI:
-    return request.app
+
 
 # --- Models --- #
 
@@ -87,34 +87,12 @@ async def chat_completion_models() -> list[ChatCompletionModels]:
 @router.post('/v1/chat/completions')
 @router.post('/chat/completions')
 async def chat_completions(req: ChatCompletionRequest, app: FastAPI = Depends(get_app_instance)) -> ChatCompletionResponse:
-    # app.state.model = ctransformers.LLM(
-    #         model_path='/Users/paxnewman/.models/llm/7B/stablebeluga-7b.ggmlv3.q4_K_M.bin',
-    #         model_type='llama',
-    #         config=ctransformers.Config(
-    #             context_length=2048,
-    #             gpu_layers=1,
-    #             )
-    #         )
-    # app.state.model_name = 'stablebeluga'
-    # model = app.state.model
 
-
-    # When loading the configs from yamls, we should
-    # be getting a model specific config like this.
-    # It might be good for models configs to designate
-    # what library the belong to. I.e. here it might be
-    # llamacpp/stablebeluga or something for the name?
-    config = LlamaCPPModelConfig(
-            name='stablebeluga',
-            path='/Users/paxnewman/.models/llm/7B/stablebeluga-7b.ggmlv3.q4_K_M.bin',
-            type='llama',
-            context_length=2048,
-            gpu_layers=1,
-            )
-
-    model: ModelInterface = LlamaCPPModel(config)
-
-    model.load()
+    # FIXME this won't work if there's a model under the same name but different function (e.g. embedding)
+    if app.state.model_name == req.model:
+        model = app.state.model
+    else:
+        model = set_model(app, 'stablebeluga', 'completion')
 
     # Create chat history prompt
     cap_first = lambda x : x[0].upper() + x[1:]

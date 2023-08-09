@@ -24,11 +24,9 @@ class TextCompletionModelConfig(ModelConfig):
 # --- Interfaces --- #
 
 class ModelInterface():
-    def __init__(self, config: ModelConfig):
-        self.config = config
+    def __init__(self, **kwargs):
+        self.config = kwargs
         self.model = None
-    def load(self):
-        ...
     def __call__(self, input: Any, **kwargs) -> Any:
         ...
 
@@ -49,10 +47,8 @@ class SentenceTransformerModelConfig(TextEmbeddingModelConfig):
 
 class SentenceTransformerModel(TextEmbeddingModelInterface):
     def __init__(self, config: SentenceTransformerModelConfig):
-        self.model = None
+        self.model = SentenceTransformer(config.path, device=config.device)
         self.config = config
-    def load(self):
-        self.model = SentenceTransformer(self.config.path, device=self.config.device)
     def __call__(self, input: str) -> torch.Tensor:
         return self.model.encode(input, convert_to_numpy=False)
 
@@ -64,14 +60,14 @@ class LlamaCPPModelConfig(TextCompletionModelConfig):
     gpu_layers: int
 
 class LlamaCPPModel(TextCompletionModelInterface):
-    def __init__(self, config: LlamaCPPModelConfig):
-        print(config)
+    def __init__(self, **kwargs):
+        self.config = LlamaCPPModelConfig.model_validate(kwargs)
         self.model = ctransformers.LLM(
-                config.path,
-                config.type,
+                self.config.path,
+                self.config.type,
                 config=ctransformers.Config(
-                    context_length=config.context_length,
-                    gpu_layers=config.gpu_layers,
+                    context_length=self.config.context_length,
+                    gpu_layers=self.config.gpu_layers,
                     )
                 )
         print(self.model.config)
