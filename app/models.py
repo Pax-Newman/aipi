@@ -38,20 +38,6 @@ class TextCompletionModelInterface(ModelInterface):
     def __call__(self, input: str, **kwargs) -> tuple[str, str] | Generator[tuple[str, str | None], Any, Any]:
         ...
 
-# --- Models --- #
-
-# --- Text Embedding
-
-class SentenceTransformerModelConfig(TextEmbeddingModelConfig):
-    device: str
-
-class SentenceTransformerModel(TextEmbeddingModelInterface):
-    def __init__(self, config: SentenceTransformerModelConfig):
-        self.model = SentenceTransformer(config.path, device=config.device)
-        self.config = config
-    def __call__(self, input: str) -> torch.Tensor:
-        return self.model.encode(input, convert_to_numpy=False)
-
 # --- Text Completion
 
 class LlamaCPPModelConfig(TextCompletionModelConfig):
