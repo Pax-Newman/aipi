@@ -22,6 +22,7 @@ def get_app_instance(request: Request) -> FastAPI:
     return request.app
 
 def inject_models_to_enum(enum_locals: dict, values: dict):
+    values = values.__dict__
     # Dynamically fill an enum with values
     for key, value in values.items():
         enum_locals[key] = value.name
