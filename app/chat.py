@@ -9,23 +9,16 @@ from typing import Literal
 import json
 
 from .models import LlamaCPPModel, LlamaCPPModelConfig, ModelConfig, ModelInterface
-from .utils import set_model, get_app_instance
+from .utils import get_app_instance, set_model, inject_models_to_enum, load_config
 
 router = APIRouter()
-
-# It might be good to put other text completion routes in here
-
-# --- Utils --- #
-
-# Should probably move most of these into a general utils file
-
-
 
 # --- Models --- #
 
 class ChatCompletionModels(str, Enum):
-    examplenet = 'examplenet'
-    othernet = 'othernet'
+    inject_models_to_enum(locals(),
+        load_config('config.yaml').models.completion
+        )
 
 class Usage(BaseModel):
     prompt_tokens: int

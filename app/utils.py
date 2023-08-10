@@ -1,6 +1,6 @@
 
 from fastapi import FastAPI, Request
-from skeletonkey import instantiate
+from skeletonkey import instantiate, unlock
 
 def set_model(app: FastAPI, name: str, model_type: str):
     assert model_type in app.state.config.models, f"Model type {model_type} not found in config"
@@ -20,3 +20,15 @@ def set_model(app: FastAPI, name: str, model_type: str):
 
 def get_app_instance(request: Request) -> FastAPI:
     return request.app
+
+def inject_models_to_enum(enum_locals: dict, values: dict):
+    # Dynamically fill an enum with values
+    for key, value in values.items():
+        enum_locals[key] = value.name
+
+def load_config(path):
+    @unlock(path)
+    def inner(config):
+        return config
+    return inner()
+

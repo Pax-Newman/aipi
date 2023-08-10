@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from enum import Enum
 
 from .chat import router as chat_router
+from .utils import load_config
 
 from sentence_transformers import SentenceTransformer
 
@@ -34,11 +35,7 @@ async def root():
 app.state.model = None
 app.state.model_name = ""
 
-@unlock('config.yaml')
-def load_config(config):
-    return config
-
-app.state.config = load_config()
+app.state.config = load_config('config.yaml')
 
 # Create a better method for loading models!
 # Let's make a function first then try using 
