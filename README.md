@@ -1,10 +1,11 @@
 # aipi
-A small general purpose API for AI/ML applications.
+A small general purpose flexible API for AI/ML applications.
 
-## Planned features
+## To Do
 
- - [ ] Sentence embeddings with SentenceTransformers
- - [ ] CLIP image/text embeddings
  - [ ] Local LLM inference with Llamacpp
-   - Generally works but there seems to be a bug when trying to use it in place of OpenAI's API
- - [X] Config file to define model paths
+   - Chat endpoint works but there seems to be a bug when trying to use it in place of OpenAI's API
+   - Regular (Non-chat) completion endpoint needs to be added
+ - [ ] Config file to define model paths
+   - Model definitions in the config works, but currently the config path is hardcoded
+ - [ ] Add documentation for adding new model types
