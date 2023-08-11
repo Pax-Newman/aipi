@@ -1,46 +1,12 @@
-
 from typing import Any, Generator
 import re
-from pydantic import BaseModel
 
-import torch
 import ctransformers
 
-from sentence_transformers import SentenceTransformer
+from .interfaces import ModelConfig, TextCompletionModelInterface
 
 
-# --- Configs --- #
-
-class ModelConfig(BaseModel):
-    name: str
-    path: str
-
-class TextEmbeddingModelConfig(ModelConfig):
-    ...
-
-class TextCompletionModelConfig(ModelConfig):
-    ...
-
-# --- Interfaces --- #
-
-class ModelInterface():
-    def __init__(self, **kwargs):
-        self.config = kwargs
-        self.model = None
-    def __call__(self, input: Any, **kwargs) -> Any:
-        ...
-
-class TextEmbeddingModelInterface(ModelInterface):
-    def __call__(self, input: str, **kwargs) -> torch.Tensor:
-        ...
-
-class TextCompletionModelInterface(ModelInterface):
-    def __call__(self, input: str, **kwargs) -> tuple[str, str] | Generator[tuple[str, str | None], Any, Any]:
-        ...
-
-# --- Text Completion
-
-class LlamaCPPModelConfig(TextCompletionModelConfig):
+class LlamaCPPModelConfig(ModelConfig):
     type: str
     context_length: int
     gpu_layers: int

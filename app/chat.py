@@ -8,7 +8,6 @@ from typing import Literal
 
 import json
 
-from .models import LlamaCPPModel, LlamaCPPModelConfig, ModelConfig, ModelInterface
 from .utils import get_app_instance, set_model, inject_models_to_enum, load_config
 
 router = APIRouter()
