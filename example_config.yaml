@@ -11,7 +11,7 @@ models:
     # This is the definition for a model
     stablebeluga:
       # It's a ggml model so we need to load it as a LlamaCPPModel
-      _target_: 'app.models.LlamaCPPModel'
+      _target_: 'models.LlamaCPPModel'
       # This is how the api will refer to this model
       name: 'stablebeluga'
       # The path to the model file
