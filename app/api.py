@@ -1,19 +1,14 @@
-from typing import Literal
 from fastapi import FastAPI
 
-from pydantic import BaseModel
-from enum import Enum
-
-from .chat import router as chat_router
 from .utils import load_config
 
-from sentence_transformers import SentenceTransformer
-
-from skeletonkey import unlock, instantiate
+from .chat import router as chat_router
+from .text_embeddings import router as text_embeddings_router
 
 app = FastAPI()
 
 app.include_router(chat_router)
+app.include_router(text_embeddings_router)
 
 @app.get('/')
 async def root():

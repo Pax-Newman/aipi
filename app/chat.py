@@ -12,12 +12,12 @@ from .utils import get_app_instance, set_model, inject_models_to_enum, load_conf
 
 router = APIRouter()
 
-# --- Models --- #
-
 class ChatCompletionModels(str, Enum):
     inject_models_to_enum(locals(),
         load_config('config.yaml').models.completion
         )
+
+# --- Models --- #
 
 class Usage(BaseModel):
     prompt_tokens: int
