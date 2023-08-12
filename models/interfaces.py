@@ -16,3 +16,7 @@ class TextCompletionModelInterface(ModelInterface):
     def __call__(self, input: str, **kwargs) -> tuple[str, str] | Generator[tuple[str, str | None], Any, Any]:
         ...
 
+class TextEmbeddingModelInterface(ModelInterface):
+    def __call__(self, input: str | list[str], **kwargs) -> list[float] | list[list[float]]:
+        ...
+
