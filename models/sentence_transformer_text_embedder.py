@@ -1,5 +1,4 @@
 
-
 import sentence_transformers
 
 from .interfaces import ModelConfig, TextEmbeddingModelInterface

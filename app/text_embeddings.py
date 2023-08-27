@@ -2,7 +2,6 @@ from fastapi import FastAPI, APIRouter, Depends
 
 from pydantic import BaseModel
 from enum import Enum
-from typing import Literal
 
 from .utils import get_app_instance, set_model, inject_models_to_enum, load_config
 
