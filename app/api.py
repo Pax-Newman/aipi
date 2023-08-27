@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 from .utils import load_config
 
@@ -12,7 +13,7 @@ app.include_router(text_embeddings_router)
 
 @app.get('/')
 async def root():
-    return {'message' : 'hello world'}
+    return RedirectResponse("/docs")
 
 # Keep most recently used model in memory to avoid loading it at each request
 app.state.model = None
